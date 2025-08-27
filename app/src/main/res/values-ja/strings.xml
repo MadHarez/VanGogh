@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">VanGogh</string>
+    
+    <!-- Main UI -->
+    <string name="project_management">VanGogh</string>
+    <string name="new_project">新規プロジェクト</string>
+    <string name="select_image">画像を選択</string>
+    <string name="no_projects_yet">プロジェクトがありません</string>
+    <string name="create_first_project">最初のプロジェクトを作成して画像編集を開始</string>
+    <string name="edited">編集済み</string>
+    <string name="delete_project">プロジェクトを削除</string>
+    
+    <!-- Project Dialog -->
+    <string name="create_new_project">新規プロジェクト作成</string>
+    <string name="project_name">プロジェクト名</string>
+    <string name="project_description">プロジェクト説明（任意）</string>
+    <string name="create">作成</string>
+    <string name="cancel">キャンセル</string>
+    <string name="delete">削除</string>
+    <string name="delete_project_confirmation">プロジェクト \"%1$s\" を削除してもよろしいですか？この操作は元に戻せません。</string>
+    
+    <!-- Filters -->
+    <string name="filter_original">オリジナル</string>
+    <string name="filter_vintage">ヴィンテージ</string>
+    <string name="filter_vivid">鮮やか</string>
+    <string name="filter_mono">モノクロ</string>
+    <string name="filter_warm">暖色</string>
+    <string name="filter_cool">寒色</string>
+    <string name="filter_dramatic">ドラマチック</string>
+    <string name="filter_soft">ソフト</string>
+    <string name="filter_sharp">シャープ</string>
+    
+    <!-- Basic Adjustments -->
+    <string name="brightness">明度</string>
+    <string name="contrast">コントラスト</string>
+    <string name="saturation">彩度</string>
+    <string name="temperature">色温度</string>
+    <string name="reset">リセット</string>
+    
+    <!-- Advanced Adjustments -->
+    <string name="advanced_adjustments">高度な調整</string>
+    <string name="basic_adjustments">基本調整</string>
+    <string name="color_adjustments">色調整</string>
+    <string name="light_shadow_adjustments">ライト＆シャドウ</string>
+    <string name="exposure">露出</string>
+    <string name="tint">ティント</string>
+    <string name="highlight">ハイライト</string>
+    <string name="shadow">シャドウ</string>
+    <string name="reset_all_adjustments">すべての調整をリセット</string>
+    
+    <!-- Content Descriptions -->
+    <string name="content_desc_new_project">新規プロジェクト</string>
+    <string name="content_desc_delete_project">プロジェクトを削除</string>
+    
+    <!-- Gallery -->
+    <string name="gallery">ギャラリー</string>
+    <string name="view_gallery">ギャラリーを表示</string>
+    <string name="processed_images">処理済み画像</string>
+    <string name="no_processed_images">処理済み画像がありません</string>
+    <string name="start_editing">画像編集を開始するとここに表示されます</string>
+    <string name="open_image">画像を開く</string>
+    
+    <!-- Edit Screen -->
+    <string name="image_editing">画像編集</string>
+    <string name="back">戻る</string>
+    <string name="image_edit">画像編集</string>
+    <string name="undo">元に戻す</string>
+    <string name="redo">やり直し</string>
+    <string name="save">保存</string>
+    <string name="share">共有</string>
+    <string name="filters">フィルター</string>
+    <string name="basic_adjustments_tab">調整</string>
+    <string name="advanced_adjustments_tab">高度な調整</string>
+    
+    <!-- 編集ツール -->
+    <string name="tool_crop">クロップ</string>
+    <string name="tool_effects">エフェクト</string>
+    <string name="tool_text">テキスト</string>
+    
+    <!-- Default Project Names -->
+    <string name="default_project_name">新規プロジェクト %1$d</string>
+    <string name="default_project_description">画像編集プロジェクト</string>
+</resources>

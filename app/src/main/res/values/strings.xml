@@ -1,3 +1,83 @@
 <resources>
     <string name="app_name">VanGogh</string>
+    
+    <!-- Main UI -->
+    <string name="project_management">VanGogh</string>
+    <string name="new_project">New Project</string>
+    <string name="select_image">Select Image</string>
+    <string name="no_projects_yet">No projects yet</string>
+    <string name="create_first_project">Create your first project to start image editing</string>
+    <string name="edited">Edited</string>
+    <string name="delete_project">Delete Project</string>
+    
+    <!-- Project Dialog -->
+    <string name="create_new_project">Create New Project</string>
+    <string name="project_name">Project Name</string>
+    <string name="project_description">Project Description (Optional)</string>
+    <string name="create">Create</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="delete_project_confirmation">Are you sure you want to delete project \"%1$s\"? This action cannot be undone.</string>
+    
+    <!-- Filters -->
+    <string name="filter_original">Original</string>
+    <string name="filter_vintage">Vintage</string>
+    <string name="filter_vivid">Vivid</string>
+    <string name="filter_mono">B&amp;W</string>
+    <string name="filter_warm">Warm</string>
+    <string name="filter_cool">Cool</string>
+    <string name="filter_dramatic">Dramatic</string>
+    <string name="filter_soft">Soft</string>
+    <string name="filter_sharp">Sharp</string>
+    
+    <!-- Basic Adjustments -->
+    <string name="brightness">Brightness</string>
+    <string name="contrast">Contrast</string>
+    <string name="saturation">Saturation</string>
+    <string name="temperature">Temperature</string>
+    <string name="reset">Reset</string>
+    
+    <!-- Advanced Adjustments -->
+    <string name="advanced_adjustments">Advanced Adjustments</string>
+    <string name="basic_adjustments">Basic Adjustments</string>
+    <string name="color_adjustments">Color Adjustments</string>
+    <string name="light_shadow_adjustments">Light &amp; Shadow</string>
+    <string name="exposure">Exposure</string>
+    <string name="tint">Tint</string>
+    <string name="highlight">Highlight</string>
+    <string name="shadow">Shadow</string>
+    <string name="reset_all_adjustments">Reset All Adjustments</string>
+    
+    <!-- Content Descriptions -->
+    <string name="content_desc_new_project">New Project</string>
+    <string name="content_desc_delete_project">Delete Project</string>
+    
+    <!-- Gallery -->
+    <string name="gallery">Gallery</string>
+    <string name="view_gallery">View Gallery</string>
+    <string name="processed_images">Processed Images</string>
+    <string name="no_processed_images">No processed images yet</string>
+    <string name="start_editing">Start editing images to see them here</string>
+    <string name="open_image">Open Image</string>
+    
+    <!-- Edit Screen -->
+    <string name="image_editing">Image Editing</string>
+    <string name="back">Back</string>
+    <string name="image_edit">Image Edit</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
+    <string name="save">Save</string>
+    <string name="share">Share</string>
+    <string name="filters">Filters</string>
+    <string name="basic_adjustments_tab">Adjust</string>
+    <string name="advanced_adjustments_tab">Advanced</string>
+    
+    <!-- Editing Tools -->
+    <string name="tool_crop">Crop</string>
+    <string name="tool_effects">Effects</string>
+    <string name="tool_text">Text</string>
+    
+    <!-- Default Project Names -->
+    <string name="default_project_name">New Project %1$d</string>
+    <string name="default_project_description">Image editing project</string>
 </resources>
