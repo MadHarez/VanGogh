@@ -77,6 +77,22 @@
     <string name="tool_effects">Effects</string>
     <string name="tool_text">Text</string>
     
+    <!-- Advanced Adjustments -->
+    <string name="hsl_adjustment">HSL</string>
+    <string name="curve_adjustment">Curves</string>
+    <string name="fade_effect">Fade</string>
+    <string name="tone_adjustment">Tone</string>
+    
+    <!-- Effect Categories -->
+    <string name="blur_effects">Blur</string>
+    <string name="texture_effects">Texture</string>
+    <string name="grain_effects">Grain</string>
+    <string name="noise_reduction">Noise Reduction</string>
+    <string name="artistic_effects">Artistic</string>
+    
+    <!-- Natural Saturation -->
+    <string name="natural_saturation">Natural Saturation</string>
+    
     <!-- Default Project Names -->
     <string name="default_project_name">New Project %1$d</string>
     <string name="default_project_description">Image editing project</string>

@@ -77,6 +77,22 @@
     <string name="tool_effects">特效</string>
     <string name="tool_text">文字</string>
     
+    <!-- 高级调节功能 -->
+    <string name="hsl_adjustment">HSL</string>
+    <string name="curve_adjustment">曲线</string>
+    <string name="fade_effect">褪色</string>
+    <string name="tone_adjustment">色调</string>
+    
+    <!-- 特效分类 -->
+    <string name="blur_effects">模糊</string>
+    <string name="texture_effects">纹理</string>
+    <string name="grain_effects">颗粒</string>
+    <string name="noise_reduction">降噪</string>
+    <string name="artistic_effects">艺术</string>
+    
+    <!-- Natural Saturation -->
+    <string name="natural_saturation">自然饱和度</string>
+    
     <!-- Default Project Names -->
     <string name="default_project_name">新项目 %1$d</string>
     <string name="default_project_description">图像编辑项目</string>

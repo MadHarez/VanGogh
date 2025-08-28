@@ -38,7 +38,6 @@
     <string name="reset">リセット</string>
     
     <!-- Advanced Adjustments -->
-    <string name="advanced_adjustments">高度な調整</string>
     <string name="basic_adjustments">基本調整</string>
     <string name="color_adjustments">色調整</string>
     <string name="light_shadow_adjustments">ライト＆シャドウ</string>
@@ -76,6 +75,20 @@
     <string name="tool_crop">クロップ</string>
     <string name="tool_effects">エフェクト</string>
     <string name="tool_text">テキスト</string>
+    
+    <!-- 高度な調整機能 -->
+    <string name="natural_saturation">ナチュラル彩度</string>
+    <string name="hsl_adjustment">HSL</string>
+    <string name="curve_adjustment">カーブ</string>
+    <string name="fade_effect">フェード</string>
+    <string name="tone_adjustment">トーン</string>
+    
+    <!-- エフェクトカテゴリ -->
+    <string name="blur_effects">ぼかし</string>
+    <string name="texture_effects">テクスチャ</string>
+    <string name="grain_effects">グレイン</string>
+    <string name="noise_reduction">ノイズ除去</string>
+    <string name="artistic_effects">アート</string>
     
     <!-- Default Project Names -->
     <string name="default_project_name">新規プロジェクト %1$d</string>

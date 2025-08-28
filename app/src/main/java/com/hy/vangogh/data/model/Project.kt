@@ -20,6 +20,7 @@ data class Project(
     val customShadow: Float = 0f,
     val customTemperature: Float = 0f,
     val customTint: Float = 0f,
+    val customNaturalSaturation: Float = 1f,
     val createdAt: Long = System.currentTimeMillis(),
     val lastModified: Long = System.currentTimeMillis(),
     val thumbnailPath: String? = null
@@ -35,5 +36,6 @@ data class Project(
             customHighlight != 0f ||
             customShadow != 0f ||
             customTemperature != 0f ||
-            customTint != 0f
+            customTint != 0f ||
+            customNaturalSaturation != 1f
 }

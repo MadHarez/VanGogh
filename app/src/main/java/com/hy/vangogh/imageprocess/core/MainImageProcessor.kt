@@ -27,6 +27,12 @@ class MainImageProcessor(private val context: Context) : ImageProcessorInterface
     private val shadowProcessor = ShadowProcessor()
     private val temperatureProcessor = TemperatureProcessor()
     private val tintProcessor = TintProcessor()
+    private val naturalSaturationProcessor = NaturalSaturationProcessor()
+    
+    // 高级调节处理器
+    private val hslProcessor = HSLProcessor()
+    private val curveProcessor = CurveProcessor()
+    private val fadeProcessor = FadeProcessor()
     
     override suspend fun applyFilter(imageUri: Uri, filter: ImageFilter): Bitmap? = withContext(Dispatchers.IO) {
         try {
@@ -55,7 +61,8 @@ class MainImageProcessor(private val context: Context) : ImageProcessorInterface
         highlight: Float = 0f,
         shadow: Float = 0f,
         temperature: Float = 0f,
-        tint: Float = 0f
+        tint: Float = 0f,
+        naturalSaturation: Float = 1f
     ): Bitmap? = withContext(Dispatchers.IO) {
         try {
             val inputStream = context.contentResolver.openInputStream(imageUri)
@@ -64,7 +71,7 @@ class MainImageProcessor(private val context: Context) : ImageProcessorInterface
             
             if (originalBitmap == null) return@withContext null
             
-            applyAdjustmentsToBitmap(originalBitmap, brightness, exposure, contrast, saturation, highlight, shadow, temperature, tint)
+            applyAdjustmentsToBitmap(originalBitmap, brightness, exposure, contrast, saturation, highlight, shadow, temperature, tint, naturalSaturation)
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -119,7 +126,8 @@ class MainImageProcessor(private val context: Context) : ImageProcessorInterface
         highlight: Float,
         shadow: Float,
         temperature: Float,
-        tint: Float
+        tint: Float,
+        naturalSaturation: Float
     ): Bitmap {
         var processedBitmap = bitmap
         
@@ -163,6 +171,12 @@ class MainImageProcessor(private val context: Context) : ImageProcessorInterface
             processedBitmap = tintProcessor.process(processedBitmap, tint)
         }
         
+        // 8. 自然饱和度调节
+        if (naturalSaturation != 1f) {
+            val intensity = naturalSaturation - 1f
+            processedBitmap = naturalSaturationProcessor.process(processedBitmap, intensity)
+        }
+        
         return processedBitmap
     }
     
@@ -178,5 +192,192 @@ class MainImageProcessor(private val context: Context) : ImageProcessorInterface
             e.printStackTrace()
             null
         }
+    }
+    
+    // 裁切功能
+    fun cropImage(bitmap: Bitmap?, ratio: Float?): Bitmap? {
+        if (bitmap == null) return null
+        if (ratio == null) return bitmap
+        
+        val width = bitmap.width
+        val height = bitmap.height
+        
+        val newWidth: Int
+        val newHeight: Int
+        val x: Int
+        val y: Int
+        
+        if (width.toFloat() / height > ratio) {
+            // 图片太宽，需要裁切宽度
+            newHeight = height
+            newWidth = (height * ratio).toInt()
+            x = (width - newWidth) / 2
+            y = 0
+        } else {
+            // 图片太高，需要裁切高度
+            newWidth = width
+            newHeight = (width / ratio).toInt()
+            x = 0
+            y = (height - newHeight) / 2
+        }
+        
+        return Bitmap.createBitmap(bitmap, x, y, newWidth, newHeight)
+    }
+    
+    // 模糊效果
+    fun applyBlur(bitmap: Bitmap?): Bitmap? {
+        if (bitmap == null) return null
+        return blurProcessor.process(bitmap, 15f)
+    }
+    
+    // 锐化效果
+    fun applySharpen(bitmap: Bitmap?): Bitmap? {
+        if (bitmap == null) return null
+        return sharpenProcessor.process(bitmap, 1.5f)
+    }
+    
+    // 浮雕效果
+    fun applyEmboss(bitmap: Bitmap?): Bitmap? {
+        if (bitmap == null) return null
+        
+        val width = bitmap.width
+        val height = bitmap.height
+        val result = Bitmap.createBitmap(width, height, bitmap.config ?: Bitmap.Config.ARGB_8888)
+        
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+                val index = y * width + x
+                val pixel = pixels[index]
+                val nextPixel = pixels[index + 1]
+                
+                val r = ((pixel shr 16) and 0xFF) - ((nextPixel shr 16) and 0xFF) + 128
+                val g = ((pixel shr 8) and 0xFF) - ((nextPixel shr 8) and 0xFF) + 128
+                val b = (pixel and 0xFF) - (nextPixel and 0xFF) + 128
+                
+                val newR = r.coerceIn(0, 255)
+                val newG = g.coerceIn(0, 255)
+                val newB = b.coerceIn(0, 255)
+                
+                pixels[index] = (0xFF shl 24) or (newR shl 16) or (newG shl 8) or newB
+            }
+        }
+        
+        result.setPixels(pixels, 0, width, 0, 0, width, height)
+        return result
+    }
+    
+    // 边缘检测
+    fun applyEdgeDetection(bitmap: Bitmap?): Bitmap? {
+        if (bitmap == null) return null
+        
+        val width = bitmap.width
+        val height = bitmap.height
+        val result = Bitmap.createBitmap(width, height, bitmap.config ?: Bitmap.Config.ARGB_8888)
+        
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        val sobelX = arrayOf(
+            intArrayOf(-1, 0, 1),
+            intArrayOf(-2, 0, 2),
+            intArrayOf(-1, 0, 1)
+        )
+        
+        val sobelY = arrayOf(
+            intArrayOf(-1, -2, -1),
+            intArrayOf(0, 0, 0),
+            intArrayOf(1, 2, 1)
+        )
+        
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+                var gx = 0
+                var gy = 0
+                
+                for (i in -1..1) {
+                    for (j in -1..1) {
+                        val pixel = pixels[(y + i) * width + (x + j)]
+                        val gray = ((pixel shr 16) and 0xFF) * 0.299 + 
+                                  ((pixel shr 8) and 0xFF) * 0.587 + 
+                                  (pixel and 0xFF) * 0.114
+                        
+                        gx += (gray * sobelX[i + 1][j + 1]).toInt()
+                        gy += (gray * sobelY[i + 1][j + 1]).toInt()
+                    }
+                }
+                
+                val magnitude = kotlin.math.sqrt((gx * gx + gy * gy).toDouble()).toInt()
+                val edgeValue = magnitude.coerceIn(0, 255)
+                
+                pixels[y * width + x] = (0xFF shl 24) or (edgeValue shl 16) or (edgeValue shl 8) or edgeValue
+            }
+        }
+        
+        result.setPixels(pixels, 0, width, 0, 0, width, height)
+        return result
+    }
+    
+    // 噪点效果
+    fun applyNoise(bitmap: Bitmap?): Bitmap? {
+        if (bitmap == null) return null
+        
+        val width = bitmap.width
+        val height = bitmap.height
+        val result = bitmap.copy(bitmap.config ?: Bitmap.Config.ARGB_8888, true)
+        
+        val pixels = IntArray(width * height)
+        result.getPixels(pixels, 0, width, 0, 0, width, height)
+        
+        val random = kotlin.random.Random
+        
+        for (i in pixels.indices) {
+            if (random.nextFloat() < 0.1f) { // 10% 的像素添加噪点
+                val noise = random.nextInt(-50, 51)
+                val pixel = pixels[i]
+                
+                val r = (((pixel shr 16) and 0xFF) + noise).coerceIn(0, 255)
+                val g = (((pixel shr 8) and 0xFF) + noise).coerceIn(0, 255)
+                val b = ((pixel and 0xFF) + noise).coerceIn(0, 255)
+                
+                pixels[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+            }
+        }
+        
+        result.setPixels(pixels, 0, width, 0, 0, width, height)
+        return result
+    }
+    
+    // 晕影效果
+    fun applyVignette(bitmap: Bitmap?): Bitmap? {
+        if (bitmap == null) return null
+        return vignetteProcessor.process(bitmap, 0.8f)
+    }
+    
+    // HSL调节
+    fun applyHSL(bitmap: Bitmap?, hue: Float, saturation: Float, lightness: Float): Bitmap? {
+        if (bitmap == null) return null
+        return hslProcessor.process(bitmap, hue, saturation, lightness)
+    }
+    
+    // 曲线调节
+    fun applyCurves(bitmap: Bitmap?, curveType: String): Bitmap? {
+        if (bitmap == null) return null
+        val preset = when (curveType) {
+            "Increased Contrast" -> CurveProcessor.CurvePreset.CONTRAST_BOOST
+            "Soft Contrast" -> CurveProcessor.CurvePreset.SOFT_CONTRAST
+            "Film Style" -> CurveProcessor.CurvePreset.FILM_LOOK
+            "Vintage" -> CurveProcessor.CurvePreset.VINTAGE
+            else -> CurveProcessor.CurvePreset.CONTRAST_BOOST
+        }
+        return curveProcessor.applyPresetCurve(bitmap, preset)
+    }
+    
+    // 褪色效果
+    fun applyFade(bitmap: Bitmap?, intensity: Float): Bitmap? {
+        if (bitmap == null) return null
+        return fadeProcessor.process(bitmap, intensity)
     }
 }

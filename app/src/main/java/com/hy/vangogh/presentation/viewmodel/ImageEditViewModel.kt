@@ -16,9 +16,13 @@ import com.hy.vangogh.data.manager.HistoryManager
 import com.hy.vangogh.imageprocess.core.MainImageProcessor
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.ui.graphics.Color
+import com.hy.vangogh.ui.screens.TextOverlay
 import java.io.File
 
-class ImageEditViewModel : ViewModel() {
+class ImageEditViewModel(private val context: Context) : ViewModel() {
     
     var currentProject by mutableStateOf<Project?>(null)
         private set
@@ -66,9 +70,12 @@ class ImageEditViewModel : ViewModel() {
     var customTint by mutableStateOf(0f)
         private set
     
-    // 文本覆盖相关
-    var textOverlays by mutableStateOf(listOf<TextOverlay>())
+    var customNaturalSaturation by mutableStateOf(1f)
         private set
+    
+    // 文本覆盖相关
+    private val _textOverlays = MutableStateFlow(listOf<TextOverlay>())
+    val textOverlays: StateFlow<List<TextOverlay>> = _textOverlays.asStateFlow()
     
     // 裁切相关状态
     var cropRatio by mutableStateOf<Float?>(null)
@@ -105,6 +112,7 @@ class ImageEditViewModel : ViewModel() {
         customShadow = project.customShadow
         customTemperature = project.customTemperature
         customTint = project.customTint
+        customNaturalSaturation = project.customNaturalSaturation
         
         // 清空历史记录并添加初始状态
         historyManager.clearHistory()
@@ -204,6 +212,13 @@ class ImageEditViewModel : ViewModel() {
         saveProjectChanges()
     }
     
+    fun updateCustomNaturalSaturation(value: Float) {
+        customNaturalSaturation = value
+        applyCustomFilter()
+        addAdjustmentToHistory("自然饱和度", value)
+        saveProjectChanges()
+    }
+    
     private fun getEffectiveFilter(): ImageFilter {
         return if (currentFilter != ImageFilter.NONE) {
             currentFilter
@@ -235,7 +250,8 @@ class ImageEditViewModel : ViewModel() {
                         highlight = customHighlight,
                         shadow = customShadow,
                         temperature = customTemperature,
-                        tint = customTint
+                        tint = customTint,
+                        naturalSaturation = customNaturalSaturation
                     )
                     processedBitmap = bitmap
                     if (originalBitmap == null) {
@@ -268,6 +284,7 @@ class ImageEditViewModel : ViewModel() {
                 customShadow = customShadow,
                 customTemperature = customTemperature,
                 customTint = customTint,
+                customNaturalSaturation = customNaturalSaturation,
                 lastModified = System.currentTimeMillis()
             )
             if (::projectRepository.isInitialized) {
@@ -300,7 +317,31 @@ class ImageEditViewModel : ViewModel() {
                 val file = imageProcessor.saveBitmap(bitmap, filename)
                 onResult(file)
             }
-        }
+        } ?: onResult(null)
+    }
+    
+    // 保存到相册
+    fun saveToGallery(onResult: (Boolean) -> Unit) {
+        processedBitmap?.let { bitmap ->
+            viewModelScope.launch {
+                try {
+                    val filename = "VanGogh_${System.currentTimeMillis()}"
+                    val file = imageProcessor.saveBitmap(bitmap, filename)
+                    
+                    file?.let {
+                        // 通知媒体库扫描新文件
+                        val intent = android.content.Intent(android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+                        intent.data = android.net.Uri.fromFile(it)
+                        context.sendBroadcast(intent)
+                        
+                        onResult(true)
+                    } ?: onResult(false)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    onResult(false)
+                }
+            }
+        } ?: onResult(false)
     }
     
     private fun resetCustomValues() {
@@ -313,6 +354,7 @@ class ImageEditViewModel : ViewModel() {
         customShadow = 0f
         customTemperature = 0f
         customTint = 0f
+        customNaturalSaturation = 1f
         currentFilter = ImageFilter.NONE
     }
     
@@ -438,7 +480,7 @@ class ImageEditViewModel : ViewModel() {
     }
     
     // 裁切功能
-    fun setCropRatio(ratio: Float?) {
+    fun updateCropRatio(ratio: Float?) {
         cropRatio = ratio
     }
     
@@ -447,7 +489,7 @@ class ImageEditViewModel : ViewModel() {
             viewModelScope.launch {
                 isProcessing = true
                 try {
-                    val bitmap = imageProcessor.cropImage(uri, cropRatio)
+                    val bitmap = imageProcessor.cropImage(processedBitmap ?: originalBitmap, cropRatio)
                     processedBitmap = bitmap
                     addToHistory("裁切")
                 } catch (e: Exception) {
@@ -472,12 +514,12 @@ class ImageEditViewModel : ViewModel() {
                 isProcessing = true
                 try {
                     val bitmap = when (effect) {
-                        "blur" -> imageProcessor.applyBlur(uri)
-                        "sharpen" -> imageProcessor.applySharpen(uri)
-                        "emboss" -> imageProcessor.applyEmboss(uri)
-                        "edge" -> imageProcessor.applyEdgeDetection(uri)
-                        "noise" -> imageProcessor.applyNoise(uri)
-                        "vignette" -> imageProcessor.applyVignette(uri)
+                        "blur" -> imageProcessor.applyBlur(processedBitmap ?: originalBitmap)
+                        "sharpen" -> imageProcessor.applySharpen(processedBitmap ?: originalBitmap)
+                        "emboss" -> imageProcessor.applyEmboss(processedBitmap ?: originalBitmap)
+                        "edge" -> imageProcessor.applyEdgeDetection(processedBitmap ?: originalBitmap)
+                        "noise" -> imageProcessor.applyNoise(processedBitmap ?: originalBitmap)
+                        "vignette" -> imageProcessor.applyVignette(processedBitmap ?: originalBitmap)
                         else -> processedBitmap
                     }
                     processedBitmap = bitmap
@@ -493,19 +535,84 @@ class ImageEditViewModel : ViewModel() {
     
     // 历史记录功能
     fun showHistory(): List<EditHistory> {
-        return historyManager.getHistory()
+        return historyManager.getHistoryList()
+    }
+    
+    // 检查是否有编辑操作
+    fun hasEdits(): Boolean {
+        return processedBitmap != null || historyManager.getHistoryList().isNotEmpty()
+    }
+    
+    // 基础调节方法
+    fun updateBrightness(brightness: Float) {
+        customBrightness = brightness
+        applyCurrentAdjustments()
+    }
+    
+    fun updateContrast(contrast: Float) {
+        customContrast = contrast
+        applyCurrentAdjustments()
+    }
+    
+    fun updateSaturation(saturation: Float) {
+        customSaturation = saturation
+        applyCurrentAdjustments()
+    }
+    
+    fun updateWarmth(warmth: Float) {
+        customWarmth = warmth
+        applyCurrentAdjustments()
+    }
+    
+    fun updateExposure(exposure: Float) {
+        customExposure = exposure
+        applyCurrentAdjustments()
+    }
+    
+    fun updateHighlight(highlight: Float) {
+        customHighlight = highlight
+        applyCurrentAdjustments()
+    }
+    
+    fun updateShadow(shadow: Float) {
+        customShadow = shadow
+        applyCurrentAdjustments()
+    }
+    
+    fun updateTemperature(temperature: Float) {
+        customTemperature = temperature
+        applyCurrentAdjustments()
+    }
+    
+    fun updateTint(tint: Float) {
+        customTint = tint
+        applyCurrentAdjustments()
+    }
+    
+    private fun applyCurrentAdjustments() {
+        selectedImageUri?.let { uri ->
+            processImage(uri, currentFilter)
+        }
     }
     
     private fun addToHistory(action: String) {
+        val thumbnail = processedBitmap?.let { historyManager.createThumbnail(it) }
         val history = EditHistory(
             id = System.currentTimeMillis().toString(),
-            action = action,
             timestamp = System.currentTimeMillis(),
-            filter = currentFilter,
-            brightness = customBrightness,
-            contrast = customContrast,
-            saturation = customSaturation,
-            warmth = customWarmth
+            actionType = com.hy.vangogh.data.model.EditActionType.ADJUSTMENT_MADE,
+            actionDescription = action,
+            imageFilter = currentFilter,
+            customBrightness = customBrightness,
+            customContrast = customContrast,
+            customSaturation = customSaturation,
+            customWarmth = customWarmth,
+            customExposure = customExposure,
+            customHighlight = customHighlight,
+            customShadow = customShadow,
+            customTemperature = customTemperature,
+            customTint = customTint,
+            thumbnailBitmap = thumbnail
         )
         historyManager.addHistory(history)
     }
@@ -519,12 +626,12 @@ class ImageEditViewModel : ViewModel() {
             x = x,
             y = y
         )
-        textOverlays = textOverlays + newOverlay
+        _textOverlays.value = _textOverlays.value + newOverlay
         addToHistory("添加文本: $text")
     }
     
     fun updateTextOverlayPosition(id: String, x: Float, y: Float) {
-        textOverlays = textOverlays.map { overlay ->
+        _textOverlays.value = _textOverlays.value.map { overlay ->
             if (overlay.id == id) {
                 overlay.copy(x = x, y = y)
             } else {
@@ -534,10 +641,76 @@ class ImageEditViewModel : ViewModel() {
     }
     
     fun removeTextOverlay(id: String) {
-        val removedOverlay = textOverlays.find { it.id == id }
-        textOverlays = textOverlays.filter { it.id != id }
+        val removedOverlay = _textOverlays.value.find { it.id == id }
+        _textOverlays.value = _textOverlays.value.filter { it.id != id }
         removedOverlay?.let {
             addToHistory("删除文本: ${it.text}")
+        }
+    }
+    
+    // HSL调节功能
+    fun applyHSLAdjustment(hue: Float, saturation: Float, lightness: Float) {
+        val currentBitmap = processedBitmap ?: originalBitmap
+        if (currentBitmap != null) {
+            viewModelScope.launch {
+                isProcessing = true
+                try {
+                    val processor = MainImageProcessor(context)
+                    val result = processor.applyHSL(currentBitmap, hue, saturation, lightness)
+                    result?.let {
+                        processedBitmap = it
+                        addToHistory("HSL调节: H:${hue.toInt()}° S:${(saturation*100).toInt()}% L:${(lightness*100).toInt()}%")
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    isProcessing = false
+                }
+            }
+        }
+    }
+    
+    // 曲线调节功能
+    fun applyCurvesAdjustment(curveType: String) {
+        val currentBitmap = processedBitmap ?: originalBitmap
+        if (currentBitmap != null) {
+            viewModelScope.launch {
+                isProcessing = true
+                try {
+                    val processor = MainImageProcessor(context)
+                    val result = processor.applyCurves(currentBitmap, curveType)
+                    result?.let {
+                        processedBitmap = it
+                        addToHistory("曲线调节: $curveType")
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    isProcessing = false
+                }
+            }
+        }
+    }
+    
+    // 褪色效果功能
+    fun applyFadeEffect(intensity: Float) {
+        val currentBitmap = processedBitmap ?: originalBitmap
+        if (currentBitmap != null) {
+            viewModelScope.launch {
+                isProcessing = true
+                try {
+                    val processor = MainImageProcessor(context)
+                    val result = processor.applyFade(currentBitmap, intensity)
+                    result?.let {
+                        processedBitmap = it
+                        addToHistory("褪色效果: ${(intensity*100).toInt()}%")
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    isProcessing = false
+                }
+            }
         }
     }
 }

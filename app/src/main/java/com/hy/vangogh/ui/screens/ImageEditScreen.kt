@@ -28,16 +28,35 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import android.widget.Toast
 import com.hy.vangogh.R
 import com.hy.vangogh.data.model.ImageFilter
 import com.hy.vangogh.data.model.Project
 import com.hy.vangogh.presentation.viewmodel.ImageEditViewModel
+import com.hy.vangogh.presentation.viewmodel.ImageEditViewModelFactory
+import com.hy.vangogh.ui.components.HistoryDialog
+import com.hy.vangogh.ui.components.ConfirmationDialog
+import com.hy.vangogh.ui.screens.adjustments.BasicAdjustmentToolPanel
+import com.hy.vangogh.ui.screens.adjustments.AdvancedAdjustmentToolPanel
+import com.hy.vangogh.ui.screens.adjustments.AdvancedAdjustment
+import com.hy.vangogh.ui.screens.effects.EnhancedEffectsToolPanel
+import com.hy.vangogh.ui.screens.effects.EffectCategory
+import com.hy.vangogh.ui.screens.filters.FilterToolPanel
+import com.hy.vangogh.ui.screens.crop.CropToolPanel
+import com.hy.vangogh.ui.screens.text.TextToolPanel
 
 // Editing tool categories
 enum class EditingTool {
-    FILTERS, ADJUST, CROP, EFFECTS, TEXT
+    FILTERS, BASIC_ADJUST, ADVANCED_ADJUST, EFFECTS, CROP, TEXT
+}
+
+
+// Effects categories
+enum class EffectCategory {
+    BLUR, TEXTURE, GRAIN, NOISE_REDUCTION, ARTISTIC
 }
 
 // Text overlay data class
@@ -55,21 +74,23 @@ data class TextOverlay(
 fun ImageEditScreen(
     project: Project? = null,
     onBackPressed: () -> Unit,
-    viewModel: ImageEditViewModel = viewModel()
+    viewModel: ImageEditViewModel = viewModel(factory = ImageEditViewModelFactory(LocalContext.current))
 ) {
     val context = LocalContext.current
 
-    // 加载项目数据
-    LaunchedEffect(project) {
-        project?.let { viewModel.loadProject(it) }
-    }
-
+    // Initialize processor if not already done
     LaunchedEffect(Unit) {
         viewModel.initializeProcessor(context)
     }
 
     var selectedTool by remember { mutableStateOf<EditingTool?>(null) }
     var selectedAdjustment by remember { mutableStateOf<String?>(null) }
+    var selectedAdvancedAdjustment by remember { mutableStateOf<AdvancedAdjustment?>(null) }
+    var selectedEffectCategory by remember { mutableStateOf<EffectCategory?>(null) }
+
+    // Dialog states
+    var showHistoryDialog by remember { mutableStateOf(false) }
+    var showBackConfirmDialog by remember { mutableStateOf(false) }
 
     // Collect StateFlow values
     val canUndo by viewModel.canUndo.collectAsState()
@@ -82,117 +103,21 @@ fun ImageEditScreen(
                 .fillMaxSize()
                 .background(Color.Black)
         ) {
-            // Top Bar with Image Editing style
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Left side - Back button and title
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBackPressed) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.arrowback),
-                            contentDescription = stringResource(R.string.back),
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
+            // Modern Top Panel - Completely redesigned
+            ModernTopPanel(
+                onBackPressed = {
+                    if (viewModel.hasEdits()) {
+                        showBackConfirmDialog = true
+                    } else {
+                        onBackPressed()
                     }
-                    
-                    Column {
-                        Text(
-                            text = "Image",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Editing",
-                            color = Color.White,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-
-                // Right side - Action buttons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { viewModel.undo() },
-                        enabled = canUndo
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_undo),
-                            contentDescription = stringResource(R.string.undo),
-                            tint = if (canUndo) Color.White else Color.Gray.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { viewModel.redo() },
-                        enabled = canRedo
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_redo),
-                            contentDescription = stringResource(R.string.redo),
-                            tint = if (canRedo) Color.White else Color.Gray.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { 
-                            // TODO: 显示历史记录对话框
-                            viewModel.showHistory()
-                            // 可以在这里显示历史记录列表
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_history),
-                            contentDescription = "History",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            viewModel.saveImage("edited_${System.currentTimeMillis()}") { file ->
-                                // Handle save result
-                            }
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_save),
-                            contentDescription = stringResource(R.string.save),
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { 
-                            viewModel.processedBitmap?.let { bitmap ->
-                                viewModel.shareImage(bitmap, context)
-                            }
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_share),
-                            contentDescription = stringResource(R.string.share),
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
+                },
+                onHistoryClick = { showHistoryDialog = true },
+                viewModel = viewModel,
+                canUndo = canUndo,
+                canRedo = canRedo,
+                context = context
+            )
 
             // Full Screen Image Preview with Text Overlays
             Box(
@@ -272,13 +197,22 @@ fun ImageEditScreen(
                 ) {
                     when (selectedTool) {
                         EditingTool.FILTERS -> FilterToolPanel(viewModel)
-                        EditingTool.ADJUST -> AdjustmentToolPanel(
+                        EditingTool.BASIC_ADJUST -> BasicAdjustmentToolPanel(
                             viewModel = viewModel,
                             selectedAdjustment = selectedAdjustment,
                             onAdjustmentSelected = { selectedAdjustment = it }
                         )
+                        EditingTool.ADVANCED_ADJUST -> AdvancedAdjustmentToolPanel(
+                            viewModel = viewModel,
+                            selectedAdvancedAdjustment = selectedAdvancedAdjustment,
+                            onAdvancedAdjustmentSelected = { selectedAdvancedAdjustment = it }
+                        )
+                        EditingTool.EFFECTS -> EnhancedEffectsToolPanel(
+                            viewModel = viewModel,
+                            selectedEffectCategory = selectedEffectCategory,
+                            onEffectCategorySelected = { selectedEffectCategory = it }
+                        )
                         EditingTool.CROP -> CropToolPanel(viewModel)
-                        EditingTool.EFFECTS -> EffectsToolPanel(viewModel)
                         EditingTool.TEXT -> TextToolPanel(viewModel)
                         else -> Box(modifier = Modifier.height(120.dp))
                     }
@@ -307,6 +241,28 @@ fun ImageEditScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
+        
+        // Dialogs
+        if (showHistoryDialog) {
+            HistoryDialog(
+                historyList = viewModel.showHistory(),
+                onDismiss = { showHistoryDialog = false }
+            )
+        }
+        
+        if (showBackConfirmDialog) {
+            ConfirmationDialog(
+                title = "退出编辑",
+                message = "您有未保存的编辑内容，确定要退出吗？",
+                confirmText = "退出",
+                cancelText = "继续编辑",
+                onConfirm = {
+                    showBackConfirmDialog = false
+                    onBackPressed()
+                },
+                onCancel = { showBackConfirmDialog = false }
+            )
+        }
     }
 }
 
@@ -320,9 +276,10 @@ private fun ToolButton(
 
     val (iconRes, labelRes) = when (tool) {
         EditingTool.FILTERS -> R.drawable.ic_image to R.string.filters
-        EditingTool.ADJUST -> R.drawable.ic_adjust to R.string.basic_adjustments_tab
-        EditingTool.CROP -> R.drawable.ic_crop to R.string.tool_crop
+        EditingTool.BASIC_ADJUST -> R.drawable.ic_adjust to R.string.basic_adjustments_tab
+        EditingTool.ADVANCED_ADJUST -> R.drawable.ic_tune to R.string.advanced_adjustments
         EditingTool.EFFECTS -> R.drawable.ic_effects to R.string.tool_effects
+        EditingTool.CROP -> R.drawable.ic_crop to R.string.tool_crop
         EditingTool.TEXT -> R.drawable.ic_text to R.string.tool_text
     }
 
@@ -449,7 +406,7 @@ private fun FilterPreviewItem(
 }
 
 @Composable
-private fun AdjustmentToolPanel(
+private fun BasicAdjustmentToolPanel(
     viewModel: ImageEditViewModel,
     selectedAdjustment: String?,
     onAdjustmentSelected: (String?) -> Unit
@@ -458,6 +415,7 @@ private fun AdjustmentToolPanel(
         "brightness" to R.string.brightness,
         "contrast" to R.string.contrast,
         "saturation" to R.string.saturation,
+        "natural_saturation" to R.string.natural_saturation,
         "temperature" to R.string.temperature
     )
 
@@ -568,6 +526,12 @@ private fun AdjustmentSliderPanel(
             range = -1f..1f
             labelRes = R.string.temperature
         }
+        "natural_saturation" -> {
+            value = viewModel.customNaturalSaturation
+            onValueChange = viewModel::updateCustomNaturalSaturation
+            range = 0f..2f
+            labelRes = R.string.natural_saturation
+        }
         else -> {
             value = 0f
             onValueChange = {}
@@ -656,7 +620,7 @@ private fun CropToolPanel(viewModel: ImageEditViewModel) {
                     name = name,
                     isSelected = viewModel.cropRatio == ratio,
                     onClick = { 
-                        viewModel.setCropRatio(ratio)
+                        viewModel.updateCropRatio(ratio)
                     }
                 )
             }
@@ -991,5 +955,166 @@ private fun DraggableText(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ModernTopPanel(
+    onBackPressed: () -> Unit,
+    onHistoryClick: () -> Unit,
+    viewModel: ImageEditViewModel,
+    canUndo: Boolean,
+    canRedo: Boolean,
+    context: android.content.Context
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.Black.copy(alpha = 0.9f),
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left Section - Back & Title
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Modern Back Button
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .clickable { onBackPressed() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.arrowback),
+                        contentDescription = stringResource(R.string.back),
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                // Title Section
+                Column {
+                    Text(
+                        text = "VanGogh",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Right Section - Action Buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Undo Button
+                ModernActionButton(
+                    iconRes = R.drawable.ic_undo,
+                    contentDescription = stringResource(R.string.undo),
+                    enabled = canUndo,
+                    onClick = { viewModel.undo() }
+                )
+                
+                // Redo Button  
+                ModernActionButton(
+                    iconRes = R.drawable.ic_redo,
+                    contentDescription = stringResource(R.string.redo),
+                    enabled = canRedo,
+                    onClick = { viewModel.redo() }
+                )
+                
+                // History Button
+                ModernActionButton(
+                    iconRes = R.drawable.ic_history,
+                    contentDescription = "History",
+                    enabled = true,
+                    onClick = onHistoryClick
+                )
+                
+                // Save Button
+                ModernActionButton(
+                    iconRes = R.drawable.ic_save,
+                    contentDescription = stringResource(R.string.save),
+                    enabled = true,
+                    isHighlighted = true,
+                    onClick = {
+                        viewModel.processedBitmap?.let { bitmap ->
+                            viewModel.saveImage("edited_${System.currentTimeMillis()}") { file ->
+                                if (file != null) {
+                                    Toast.makeText(context, "图片已保存", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "保存失败", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } ?: Toast.makeText(context, "没有图片可保存", Toast.LENGTH_SHORT).show()
+                    }
+                )
+                
+                // Share Button
+                ModernActionButton(
+                    iconRes = R.drawable.ic_share,
+                    contentDescription = stringResource(R.string.share),
+                    enabled = true,
+                    onClick = { 
+                        viewModel.processedBitmap?.let { bitmap ->
+                            // 先保存到相册，然后分享
+                            viewModel.saveToGallery { success ->
+                                if (success) {
+                                    viewModel.shareImage(bitmap, context)
+                                    Toast.makeText(context, "图片已保存到相册并分享", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "保存失败", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } ?: Toast.makeText(context, "没有图片可分享", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ModernActionButton(
+    iconRes: Int,
+    contentDescription: String,
+    enabled: Boolean,
+    isHighlighted: Boolean = false,
+    onClick: () -> Unit
+) {
+    val backgroundColor = when {
+        isHighlighted -> Color(0xFF007AFF)
+        enabled -> Color.White.copy(alpha = 0.1f)
+        else -> Color.White.copy(alpha = 0.05f)
+    }
+    
+    val iconTint = when {
+        isHighlighted -> Color.White
+        enabled -> Color.White
+        else -> Color.White.copy(alpha = 0.4f)
+    }
+    
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .background(backgroundColor, RoundedCornerShape(8.dp))
+            .clickable(enabled = enabled) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = contentDescription,
+            tint = iconTint,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
